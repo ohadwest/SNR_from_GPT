@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Signal with Noise Visualization</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h2>Interactive Signal with Noise Visualization</h2>
+
+    <label for="snrSlider">SNR value (dB):</label>
+    <input type="range" id="snrSlider" min="-20" max="20" value="0" step="0.1">
+    <span id="snrValue">0 dB</span>
+
+    <div id="plot"></div>
+
+    <script>
+        // Function to generate the signal with noise
+        function generateSignal(snr_db) {
+            const fs = 500; // Number of samples
+            const t = Array.from({length: fs}, (_, i) => i * (500 / fs)); // Time vector
+            
+            // Create signal array with three different pulse signals
+            let signal = new Array(fs).fill(0);
+            for (let i = 0; i < fs; i++) {
+                if (t[i] >= 100 && t[i] <= 150) {
+                    signal[i] = 1 * 2; // Pulse 1: 2 nW from 100 to 150 µs
+                } else if (t[i] >= 200 && t[i] <= 225) {
+                    signal[i] = 1 * 0.5; // Pulse 2: 0.5 nW from 200 to 225 µs
+                } else if (t[i] >= 350 && t[i] <= 400) {
+                    signal[i] = 1 * 1; // Pulse 3: 1 nW from 350 to 400 µs
+                }
+            }
+            
+            const signalPower = 1; // Assume average signal power as 1 nW for calculation purposes
+            const noisePower = signalPower * (10 ** (-snr_db / 10)); // Adjusted noise power
+            const noise = Array.from({length: fs}, () => Math.sqrt(noisePower) * (Math.random() - 0.5));
+            const noisySignal = signal.map((val, i) => val + noise[i]);
+
+            return {t, signal, noisySignal};
+        }
+
+        // Function to plot the signal
+        function plotSignal(snr_db) {
+            const {t, signal, noisySignal} = generateSignal(snr_db);
+            const trace1 = {
+                x: t,
+                y: signal,
+                mode: 'lines',
+                name: 'Original Signal',
+                line: {color: 'blue'}
+            };
+
+            const trace2 = {
+                x: t,
+                y: noisySignal,
+                mode: 'lines',
+                name: 'Noisy Signal',
+                line: {color: 'red', width: 2}
+            };
+
+            const layout = {
+                title: `Signal and Noisy Signal at SNR = ${snr_db} dB`,
+                xaxis: {title: 'Time [µs]'},
+                yaxis: {title: 'Signal Amplitude [nW]', range: [-2, 3]},
+                legend: {x: 1, xanchor: 'right', y: 1}
+            };
+
+            Plotly.newPlot('plot', [trace1, trace2], layout);
+        }
+
+        // Initial plot with default SNR value
+        plotSignal(0);
+
+        // Update plot when the SNR value is changed
+        document.getElementById('snrSlider').addEventListener('input', function() {
+            const snrValue = parseFloat(this.value);
+            document.getElementById('snrValue').textContent = `${snrValue.toFixed(1)} dB`;
+            plotSignal(snrValue);
+        });
+    </script>
+</body>
+</html>
